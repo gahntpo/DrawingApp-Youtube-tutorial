@@ -6,16 +6,19 @@
 //
 
 import Foundation
-
+import Combine
 
 class DrawingDocument: ObservableObject {
    
     
-    @Published var lines = [Line]() {
-        didSet {
-            save()
-        }
-    }
+    @Published var lines = [Line]()
+//    {
+//        didSet {
+//            save()
+//        }
+//    }
+//
+    var subscription = Set<AnyCancellable>()
     
     init() {
         //load the data
@@ -30,18 +33,28 @@ class DrawingDocument: ObservableObject {
                 print("decoding error \(error)")
             }
         }
+        
+        $lines
+            .filter({ !$0.isEmpty })
+            //.throttle(for: 2, scheduler: RunLoop.main, latest: true) // fixed per interval
+            .debounce(for: 2, scheduler: RunLoop.main) // bursty events
+            .sink { [unowned self] lines in
+            self.save()
+        }.store(in: &subscription)
+        
     }
     
     func save() {
-        let encoder = JSONEncoder()
-        
-        let data = try? encoder.encode(self.lines)
-        
-        do {
+        DispatchQueue.global(qos: .background).async { [unowned self] in
+            let encoder = JSONEncoder()
+            let data = try? encoder.encode(self.lines)
             
-            try data?.write(to: self.url)
-        }catch {
-            print("error saving \(error)")
+            do {
+                
+                try data?.write(to: self.url)
+            }catch {
+                print("error saving \(error)")
+            }
         }
     }
     

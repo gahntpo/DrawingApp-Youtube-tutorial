@@ -68,25 +68,25 @@ struct DrawingView: View {
             }.padding()
             
             
-            ZStack {
-                Color.white
-
-                ForEach(drawingDocument.lines){ line in
-                    DrawingShape(points: line.points)
-                        .stroke(line.color, style: StrokeStyle(lineWidth: line.lineWidth, lineCap: .round, lineJoin: .round))
-                }
-            }
-            
-//        Canvas { context, size in
+//            ZStack {
+//                Color.white
 //
-//            for line in drawingDocument.lines {
-//
-//                let path = engine.createPath(for: line.points)
-//
-//                context.stroke(path, with: .color(line.color), style: StrokeStyle(lineWidth: line.lineWidth, lineCap: .round, lineJoin: .round))
-//
+//                ForEach(drawingDocument.lines){ line in
+//                    DrawingShape(points: line.points)
+//                        .stroke(line.color, style: StrokeStyle(lineWidth: line.lineWidth, lineCap: .round, lineJoin: .round))
+//                }
 //            }
-//        }
+            
+        Canvas { context, size in
+
+            for line in drawingDocument.lines {
+
+                let path = engine.createPath(for: line.points)
+
+                context.stroke(path, with: .color(line.color), style: StrokeStyle(lineWidth: line.lineWidth, lineCap: .round, lineJoin: .round))
+
+            }
+        }
         .gesture(DragGesture(minimumDistance: 0, coordinateSpace: .local).onChanged({ value in
             let newPoint = value.location
             if value.translation.width + value.translation.height == 0 {
