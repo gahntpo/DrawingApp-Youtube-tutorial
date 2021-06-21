@@ -9,11 +9,14 @@ import SwiftUI
 
 struct DrawingView: View {
     
-    @State private var lines = [Line]()
+    @Environment(\.scenePhase) var scenePhase
+    
+    @StateObject var drawingDocument = DrawingDocument()
     @State private var deletedLines = [Line]()
     
-    @State private var selectedColor: Color = .black
-    @State private var selectedLineWidth: CGFloat = 1
+    @StateObject var selectedColor = UserDefaultColor()
+   // @State private var selectedColor: Color = .black
+    @SceneStorage("selectedLineWidth") var selectedLineWidth: Double = 1
     
     let engine = DrawingEngine()
     @State private var showConfirmation: Bool = false
@@ -23,7 +26,7 @@ struct DrawingView: View {
         VStack {
             
             HStack {
-                ColorPicker("line color", selection: $selectedColor)
+                ColorPicker("line color", selection: $selectedColor.color)
                     .labelsHidden()
                 Slider(value: $selectedLineWidth, in: 1...20) {
                     Text("linewidth")
@@ -33,17 +36,17 @@ struct DrawingView: View {
                 Spacer()
                 
                 Button {
-                    let last = lines.removeLast()
+                    let last = drawingDocument.lines.removeLast()
                     deletedLines.append(last)
                 } label: {
                     Image(systemName: "arrow.uturn.backward.circle")
                         .imageScale(.large)
-                }.disabled(lines.count == 0)
+                }.disabled(drawingDocument.lines.count == 0)
                 
                 Button {
                     let last = deletedLines.removeLast()
                     
-                    lines.append(last)
+                    drawingDocument.lines.append(last)
                 } label: {
                     Image(systemName: "arrow.uturn.forward.circle")
                         .imageScale(.large)
@@ -57,7 +60,7 @@ struct DrawingView: View {
                     .confirmationDialog(Text("Are you sure you want to delete everything?"), isPresented: $showConfirmation) {
                         
                         Button("Delete", role: .destructive) {
-                            lines = [Line]()
+                            drawingDocument.lines = [Line]()
                             deletedLines = [Line]()
                         }
                     }
@@ -67,18 +70,16 @@ struct DrawingView: View {
             
             ZStack {
                 Color.white
-                
-                ForEach(lines){ line in
+
+                ForEach(drawingDocument.lines){ line in
                     DrawingShape(points: line.points)
                         .stroke(line.color, style: StrokeStyle(lineWidth: line.lineWidth, lineCap: .round, lineJoin: .round))
                 }
             }
             
-            
-            
 //        Canvas { context, size in
 //
-//            for line in lines {
+//            for line in drawingDocument.lines {
 //
 //                let path = engine.createPath(for: line.points)
 //
@@ -90,20 +91,27 @@ struct DrawingView: View {
             let newPoint = value.location
             if value.translation.width + value.translation.height == 0 {
                 //TODO: use selected color and linewidth
-                lines.append(Line(points: [newPoint], color: selectedColor, lineWidth: selectedLineWidth))
+                drawingDocument.lines.append(Line(points: [newPoint],
+                                                  color: selectedColor.color, lineWidth: selectedLineWidth))
             } else {
-                let index = lines.count - 1
-                lines[index].points.append(newPoint)
+                let index = drawingDocument.lines.count - 1
+                drawingDocument.lines[index].points.append(newPoint)
             }
             
         }).onEnded({ value in
-            if let last = lines.last?.points, last.isEmpty {
-                lines.removeLast()
+            if let last = drawingDocument.lines.last?.points, last.isEmpty {
+                drawingDocument.lines.removeLast()
             }
         })
         
         )
             
+        }
+        
+        .onChange(of: scenePhase) { newValue in
+            if newValue == .background {
+                drawingDocument.save()
+            }
         }
     }
 }

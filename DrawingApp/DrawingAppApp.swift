@@ -12,7 +12,6 @@ struct DrawingAppApp: App {
     var body: some Scene {
         WindowGroup {
             DrawingView()
-//            ContentView()
         }
     }
 }
